@@ -1,0 +1,31 @@
+trigger:
+- main  # or 'master' if your default branch is master
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  SONARQUBE_PROJECT_KEY: 'webgoat'
+  SONARQUBE_PROJECT_NAME: 'WebGoat'
+
+steps:
+- task: SonarQubePrepare@5
+  inputs:
+    SonarQube: 'SonarQube-Local'  # Your service connection name
+    scannerMode: 'CLI'
+    configMode: 'manual'
+    cliProjectKey: '$(SONARQUBE_PROJECT_KEY)'
+    cliProjectName: '$(SONARQUBE_PROJECT_NAME)'
+    cliSources: '.'
+
+- script: |
+    echo "Building WebGoat with Maven..."
+    chmod +x mvnw
+    ./mvnw clean compile
+  displayName: 'Build with Maven'
+
+- task: SonarQubeAnalyze@5
+
+- task: SonarQubePublish@5
+  inputs:
+    pollingTimeoutSec: '300'
