@@ -1,31 +1,34 @@
 trigger:
-- main  # or 'master' if your default branch is master
+  branches:
+    include:
+      - main
+
+pr:
+  branches:
+    include:
+      - '*'
 
 pool:
   vmImage: 'ubuntu-latest'
 
-variables:
-  SONARQUBE_PROJECT_KEY: 'webgoat'
-  SONARQUBE_PROJECT_NAME: 'WebGoat'
-
 steps:
-- task: SonarQubePrepare@5
-  inputs:
-    SonarQube: 'SonarQube-Local'  # Your service connection name
-    scannerMode: 'CLI'
-    configMode: 'manual'
-    cliProjectKey: '$(SONARQUBE_PROJECT_KEY)'
-    cliProjectName: '$(SONARQUBE_PROJECT_NAME)'
-    cliSources: '.'
 
+# 🔐 1. Gitleaks – Secret Detection
 - script: |
-    echo "Building WebGoat with Maven..."
-    chmod +x mvnw
-    ./mvnw clean compile
-  displayName: 'Build with Maven'
+    echo "Installing Gitleaks..."
+    curl -sSL https://github.com/gitleaks/gitleaks/releases/latest/download/gitleaks-linux-amd64 -o gitleaks
+    chmod +x gitleaks
 
-- task: SonarQubeAnalyze@5
+    echo "Running Gitleaks scan on WebGoat..."
+    ./gitleaks detect \
+      --source . \
+      --report-format sarif \
+      --report-path gitleaks-report.sarif \
+      --exit-code 1
+  displayName: 'Run Gitleaks Secret Scan'
 
-- task: SonarQubePublish@5
+# 📄 2. Publish the SARIF report
+- task: PublishBuildArtifacts@1
   inputs:
-    pollingTimeoutSec: '300'
+    PathtoPublish: 'gitleaks-report.sarif'
+    ArtifactName: 'gitleaks-report'
