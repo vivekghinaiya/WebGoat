@@ -15,7 +15,7 @@ variables:
 steps:
 
 # ------------------------------------
-# Install Java 23 manually
+# Install Java 23 and Build WebGoat
 # ------------------------------------
 - script: |
     echo "Downloading OpenJDK 23..."
@@ -31,7 +31,10 @@ steps:
 
     echo "Java version:"
     java -version
-  displayName: 'Manually Install and Configure Java 23'
+
+    echo "Running Maven build..."
+    mvn clean compile
+  displayName: 'Install Java 23 and Build WebGoat'
 
 # ------------------------------------
 # SonarQube Analysis Preparation
@@ -49,15 +52,6 @@ steps:
       sonar.java.binaries=.
 
 # ------------------------------------
-# Build WebGoat with Java 23
-# ------------------------------------
-- script: |
-    export JAVA_HOME=/opt/jdk/jdk-23
-    export PATH=$JAVA_HOME/bin:$PATH
-    mvn clean compile
-  displayName: 'Build WebGoat with JDK 23'
-
-# ------------------------------------
 # SonarQube Analysis
 # ------------------------------------
 - task: SonarQubeAnalyze@5
@@ -67,22 +61,3 @@ steps:
   inputs:
     pollingTimeoutSec: '300'
   displayName: 'Publish SonarQube Results'
-
-# ------------------------------------
-# Gitleaks: Secret Detection
-# ------------------------------------
-- script: |
-    echo "Installing Gitleaks..."
-    curl -sSL https://github.com/gitleaks/gitleaks/releases/latest/download/gitleaks-linux-amd64 -o gitleaks
-    chmod +x gitleaks
-    ./gitleaks detect --source . --report-format sarif --report-path gitleaks.sarif --exit-code 1 || echo "Gitleaks found secrets."
-  displayName: 'Run Gitleaks Secret Scan'
-
-- task: PublishBuildArtifacts@1
-  inputs:
-    PathtoPublish: 'gitleaks.sarif'
-    ArtifactName: 'gitleaks-report'
-
-# ------------------------------------
-# Microsoft Security DevOps
-#
