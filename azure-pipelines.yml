@@ -4,8 +4,35 @@ trigger:
       - main
 
 pool:
-  vmImage: 'windows-latest'  # Or 'ubuntu-latest'
+  vmImage: 'ubuntu-latest'
+
+variables:
+  SONAR_PROJECT_KEY: 'WebGoat'
+  SONAR_PROJECT_NAME: 'WebGoat'
+  SONAR_HOST_URL: 'http://103.238.15.202:9000'
+  SONAR_TOKEN: $(SONARQUBE_TOKEN)  # Set in pipeline secrets
 
 steps:
-  - task: MicrosoftSecurityDevOps@1
-    displayName: 'Run Microsoft Security DevOps'
+- task: SonarQubePrepare@5
+  inputs:
+    SonarQube: 'SonarQube-Local'  # ✅ Use your actual service connection name
+    scannerMode: 'CLI'
+    configMode: 'manual'
+    cliProjectKey: '$(SONAR_PROJECT_KEY)'
+    cliProjectName: '$(SONAR_PROJECT_NAME)'
+    extraProperties: |
+      sonar.host.url=$(SONAR_HOST_URL)
+      sonar.sources=.
+      sonar.java.binaries=.
+
+- script: |
+    mvn clean compile
+  displayName: 'Build WebGoat'
+
+- task: SonarQubeAnalyze@5
+  displayName: 'Run SonarQube Analysis'
+
+- task: SonarQubePublish@5
+  inputs:
+    pollingTimeoutSec: '300'
+  displayName: 'Publish SonarQube Results'
