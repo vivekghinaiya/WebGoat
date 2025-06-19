@@ -10,12 +10,21 @@ variables:
   SONAR_PROJECT_KEY: 'WebGoat'
   SONAR_PROJECT_NAME: 'WebGoat'
   SONAR_HOST_URL: 'http://103.238.15.202:9000'
-  SONAR_TOKEN: $(SONARQUBE_TOKEN)  # Set in pipeline secrets
+  SONAR_TOKEN: $(SONARQUBE_TOKEN)
 
 steps:
+# Install Java 23
+- task: JavaToolInstaller@0
+  inputs:
+    versionSpec: '23'
+    jdkArchitectureOption: 'x64'
+    jdkSourceOption: 'PreInstalled'
+  displayName: 'Install Java 23'
+
+# Prepare SonarQube
 - task: SonarQubePrepare@5
   inputs:
-    SonarQube: 'SonarQube-Local'  # ✅ Use your actual service connection name
+    SonarQube: 'SonarQube-Local'
     scannerMode: 'CLI'
     configMode: 'manual'
     cliProjectKey: '$(SONAR_PROJECT_KEY)'
@@ -25,13 +34,16 @@ steps:
       sonar.sources=.
       sonar.java.binaries=.
 
+# Build WebGoat
 - script: |
     mvn clean compile
   displayName: 'Build WebGoat'
 
+# Analyze with SonarQube
 - task: SonarQubeAnalyze@5
   displayName: 'Run SonarQube Analysis'
 
+# Publish results
 - task: SonarQubePublish@5
   inputs:
     pollingTimeoutSec: '300'
