@@ -13,15 +13,29 @@ variables:
   SONAR_TOKEN: $(SONARQUBE_TOKEN)
 
 steps:
-# Install Java 23
-- task: JavaToolInstaller@0
-  inputs:
-    versionSpec: '23'
-    jdkArchitectureOption: 'x64'
-    jdkSourceOption: 'PreInstalled'
-  displayName: 'Install Java 23'
 
-# Prepare SonarQube
+# ------------------------------------
+# Install Java 23 manually
+# ------------------------------------
+- script: |
+    echo "Downloading OpenJDK 23..."
+    curl -L -o openjdk-23_linux-x64_bin.tar.gz https://download.java.net/java/early_access/jdk23/11/GPL/openjdk-23-ea+11_linux-x64_bin.tar.gz
+
+    echo "Extracting JDK..."
+    mkdir -p /opt/jdk
+    tar -xzf openjdk-23_linux-x64_bin.tar.gz -C /opt/jdk
+
+    echo "Setting JAVA_HOME and updating PATH..."
+    export JAVA_HOME=/opt/jdk/jdk-23
+    export PATH=$JAVA_HOME/bin:$PATH
+
+    echo "Java version:"
+    java -version
+  displayName: 'Manually Install and Configure Java 23'
+
+# ------------------------------------
+# SonarQube Analysis Preparation
+# ------------------------------------
 - task: SonarQubePrepare@5
   inputs:
     SonarQube: 'SonarQube-Local'
@@ -34,17 +48,41 @@ steps:
       sonar.sources=.
       sonar.java.binaries=.
 
-# Build WebGoat
+# ------------------------------------
+# Build WebGoat with Java 23
+# ------------------------------------
 - script: |
+    export JAVA_HOME=/opt/jdk/jdk-23
+    export PATH=$JAVA_HOME/bin:$PATH
     mvn clean compile
-  displayName: 'Build WebGoat'
+  displayName: 'Build WebGoat with JDK 23'
 
-# Analyze with SonarQube
+# ------------------------------------
+# SonarQube Analysis
+# ------------------------------------
 - task: SonarQubeAnalyze@5
   displayName: 'Run SonarQube Analysis'
 
-# Publish results
 - task: SonarQubePublish@5
   inputs:
     pollingTimeoutSec: '300'
   displayName: 'Publish SonarQube Results'
+
+# ------------------------------------
+# Gitleaks: Secret Detection
+# ------------------------------------
+- script: |
+    echo "Installing Gitleaks..."
+    curl -sSL https://github.com/gitleaks/gitleaks/releases/latest/download/gitleaks-linux-amd64 -o gitleaks
+    chmod +x gitleaks
+    ./gitleaks detect --source . --report-format sarif --report-path gitleaks.sarif --exit-code 1 || echo "Gitleaks found secrets."
+  displayName: 'Run Gitleaks Secret Scan'
+
+- task: PublishBuildArtifacts@1
+  inputs:
+    PathtoPublish: 'gitleaks.sarif'
+    ArtifactName: 'gitleaks-report'
+
+# ------------------------------------
+# Microsoft Security DevOps
+#
