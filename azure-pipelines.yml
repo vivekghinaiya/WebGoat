@@ -15,7 +15,7 @@ variables:
 steps:
 
 # ------------------------------------
-# Install Java 23 and Build WebGoat
+# Install Java 23 and Maven
 # ------------------------------------
 - script: |
     echo "Downloading OpenJDK 23..."
@@ -23,7 +23,7 @@ steps:
 
     echo "Extracting JDK..."
     mkdir -p /opt/jdk
-    tar --extract --file=openjdk-23_linux-x64_bin.tar.gz -C /opt/jdk
+    tar -xzf openjdk-23_linux-x64_bin.tar.gz -C /opt/jdk
 
     echo "Setting JAVA_HOME and updating PATH..."
     export JAVA_HOME=$(find /opt/jdk -maxdepth 1 -type d -name 'jdk-*' | head -n 1)
@@ -32,9 +32,18 @@ steps:
     echo "Java version:"
     java -version
 
+    echo "Installing Maven manually..."
+    curl -L -o apache-maven.tar.gz https://dlcdn.apache.org/maven/maven-3/3.9.6/binaries/apache-maven-3.9.6-bin.tar.gz
+    tar -xzf apache-maven.tar.gz -C /opt
+    export MAVEN_HOME=/opt/apache-maven-3.9.6
+    export PATH=$MAVEN_HOME/bin:$PATH
+
+    echo "Maven version:"
+    mvn -version
+
     echo "Running Maven build..."
     mvn clean compile
-  displayName: 'Install Java 23 and Build WebGoat'
+  displayName: 'Install Java 23, Maven, and Build WebGoat'
 
 # ------------------------------------
 # SonarQube Analysis Preparation
