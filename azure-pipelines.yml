@@ -1,89 +1,23 @@
 trigger:
-  branches:
-    include:
-      - main
+- main
 
 pool:
   vmImage: 'ubuntu-latest'
 
-variables:
-  SONAR_PROJECT_KEY: 'WebGoat'
-  SONAR_PROJECT_NAME: 'WebGoat'
-  SONAR_HOST_URL: 'http://103.238.15.202:9000'
-  SONAR_TOKEN: $(SONARQUBE_TOKEN)
-
 steps:
-
-# ------------------------------------
-# Install Java 23 and Maven globally
-# ------------------------------------
 - script: |
-    echo "Downloading OpenJDK 23..."
-    curl -L -o openjdk-23.zip https://download.java.net/java/early_access/jdk23/8/GPL/openjdk-23-ea+8_linux-x64_bin.zip
+    sudo apt update
+    sudo apt install -y openjdk-23-jdk
+    sudo update-alternatives --install /usr/bin/java java /usr/lib/jvm/java-23-openjdk-amd64/bin/java 1
+    sudo update-alternatives --install /usr/bin/javac javac /usr/lib/jvm/java-23-openjdk-amd64/bin/javac 1
+    sudo update-alternatives --set java /usr/lib/jvm/java-23-openjdk-amd64/bin/java
+    sudo update-alternatives --set javac /usr/lib/jvm/java-23-openjdk-amd64/bin/javac
+    java -version
+  displayName: 'Install and set Java 23 as default'
 
-    echo "Extracting OpenJDK..."
-    unzip openjdk-23.zip -d /opt/jdk
-
-    JAVA_HOME_PATH=$(find /opt/jdk -maxdepth 1 -type d -name 'jdk-*' | head -n 1)
-    echo "##vso[task.setvariable variable=JAVA_HOME;isOutput=true]$JAVA_HOME_PATH"
-    echo "PATH=$JAVA_HOME_PATH/bin:$PATH" >> $GITHUB_ENV
-
-    echo "Installing Maven..."
-    curl -L -o apache-maven.tar.gz https://dlcdn.apache.org/maven/maven-3/3.9.6/binaries/apache-maven-3.9.6-bin.tar.gz
-    tar -xzf apache-maven.tar.gz -C /opt
-    echo "##vso[task.setvariable variable=MAVEN_HOME;isOutput=true]/opt/apache-maven-3.9.6"
-    echo "PATH=/opt/apache-maven-3.9.6/bin:$PATH" >> $GITHUB_ENV
-
-    echo "Java version:"
-    $JAVA_HOME_PATH/bin/java -version
-
-    echo "Maven version:"
-    /opt/apache-maven-3.9.6/bin/mvn -version
-  name: SetEnv
-  displayName: 'Download & configure Java 23 and Maven'
-
-# ------------------------------------
-# Maven Build with Java 23
-# ------------------------------------
 - script: |
-    echo "Running Maven build with Java 23..."
-    mvn clean package
-  displayName: 'Build with Maven (Java 23)'
-  env:
-    JAVA_HOME: $(SetEnv.JAVA_HOME)
-    PATH: $(SetEnv.JAVA_HOME)/bin:/opt/apache-maven-3.9.6/bin:$(PATH)
-
-# ------------------------------------
-# SonarQube Preparation
-# ------------------------------------
-- task: SonarQubePrepare@5
-  inputs:
-    SonarQube: 'SonarQube-Local'
-    scannerMode: 'CLI'
-    configMode: 'manual'
-    cliProjectKey: '$(SONAR_PROJECT_KEY)'
-    cliProjectName: '$(SONAR_PROJECT_NAME)'
-    extraProperties: |
-      sonar.host.url=$(SONAR_HOST_URL)
-      sonar.sources=.
-      sonar.java.binaries=.
-
-# ------------------------------------
-# SonarQube Analysis
-# ------------------------------------
-- task: SonarQubeAnalyze@5
-  displayName: 'Run SonarQube Analysis'
-  inputs:
-    jdkVersionOption: 'JAVA_HOME'
-    jdkArchitecture: 'x64'
-  env:
-    JAVA_HOME: $(SetEnv.JAVA_HOME)
-    PATH: $(SetEnv.JAVA_HOME)/bin:/opt/apache-maven-3.9.6/bin:$(PATH)
-
-# ------------------------------------
-# Publish SonarQube Results
-# ------------------------------------
-- task: SonarQubePublish@5
-  inputs:
-    pollingTimeoutSec: '300'
-  displayName: 'Publish SonarQube Results'
+    wget https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-5.0.1.3006-linux.zip
+    unzip sonar-scanner-cli-5.0.1.3006-linux.zip
+    export PATH=$PATH:$(pwd)/sonar-scanner-5.0.1.3006-linux/bin
+    sonar-scanner --version
+  displayName: 'Install SonarScanner CLI'
