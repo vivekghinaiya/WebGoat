@@ -6,31 +6,31 @@ pool:
 
 variables:
   PROJECT_KEY: 'webgoat'
-  SONAR_TOKEN: '$(SONAR_TOKEN)'  # Store in Azure DevOps as secret
+  SONAR_TOKEN: '$(SONAR_TOKEN)'        # Store in Azure DevOps secrets
   SONAR_HOST_URL: 'http://103.238.15.202:9000/'  # Replace with your SonarQube URL
 
 steps:
 - script: |
     sudo apt update
-    sudo apt install -y openjdk-23-jdk maven
-    sudo update-alternatives --install /usr/bin/java java /usr/lib/jvm/java-23-openjdk-amd64/bin/java 1
-    sudo update-alternatives --install /usr/bin/javac javac /usr/lib/jvm/java-23-openjdk-amd64/bin/javac 1
-    sudo update-alternatives --set java /usr/lib/jvm/java-23-openjdk-amd64/bin/java
-    sudo update-alternatives --set javac /usr/lib/jvm/java-23-openjdk-amd64/bin/javac
+    sudo apt install -y openjdk-23-jdk
+    export JAVA_HOME=/usr/lib/jvm/java-23-openjdk-amd64
+    export PATH=$JAVA_HOME/bin:$PATH
+    echo "##vso[task.setvariable variable=JAVA_HOME]$JAVA_HOME"
     java -version
-    mvn -v
-  displayName: 'Install Java 23 and Maven'
+  displayName: 'Install Java 23'
 
 - script: |
-    mvn clean package
-  displayName: 'Build WebGoat'
+    wget https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-5.0.1.3006-linux.zip
+    unzip sonar-scanner-cli-5.0.1.3006-linux.zip
+    echo "##vso[task.setvariable variable=SONAR_SCANNER_PATH]$(pwd)/sonar-scanner-5.0.1.3006-linux/bin"
+  displayName: 'Install SonarScanner CLI'
 
 - script: |
     export PATH=$SONAR_SCANNER_PATH:$PATH
+    export JAVA_HOME=$JAVA_HOME
     sonar-scanner \
       -Dsonar.projectKey=$(PROJECT_KEY) \
       -Dsonar.sources=src/main \
-      -Dsonar.java.binaries=target/classes \
       -Dsonar.host.url=$(SONAR_HOST_URL) \
       -Dsonar.login=$(SONAR_TOKEN)
-  displayName: 'Run SonarQube Scan'
+  displayName: 'Run SonarQube Scan on Source'
