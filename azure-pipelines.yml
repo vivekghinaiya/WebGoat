@@ -6,7 +6,7 @@ pool:
 
 variables:
   PROJECT_KEY: 'webgoat'
-  SONAR_TOKEN: '$(SONAR_TOKEN)'        # Store in Azure DevOps secrets
+  SONAR_TOKEN: 'sqa_2977ff09548a8ceaa059b4700a87527520aa2f6d'        # Store in Azure DevOps secrets
   SONAR_HOST_URL: 'http://103.238.15.202:9000/'  # Replace with your SonarQube URL
 
 steps:
