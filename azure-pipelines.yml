@@ -18,12 +18,12 @@ steps:
 # Install Java 21 and Maven
 # ------------------------------------
 - script: |
-    echo "Downloading OpenJDK 21..."
-    curl -L -o openjdk-21_linux-x64_bin.tar.gz https://download.java.net/java/GA/jdk21/latest/binaries/openjdk-21_linux-x64_bin.tar.gz
+    echo "Downloading OpenJDK 23..."
+    curl -L -o openjdk-23_linux-x64_bin.tar.gz https://download.java.net/java/GA/jdk23/latest/binaries/openjdk-23_linux-x64_bin.tar.gz
 
     echo "Extracting JDK..."
     mkdir -p /opt/jdk
-    tar -xzf openjdk-21_linux-x64_bin.tar.gz -C /opt/jdk
+    tar -xzf openjdk-23_linux-x64_bin.tar.gz -C /opt/jdk
 
     echo "Setting JAVA_HOME and updating PATH..."
     export JAVA_HOME=$(find /opt/jdk -maxdepth 1 -type d -name 'jdk-*' | head -n 1)
@@ -42,7 +42,7 @@ steps:
     mvn -version
 
     echo "Running Maven build..."
-    mvn clean compile
+    mvn clean package
   displayName: 'Install Java 21, Maven, and Build WebGoat'
 
 # ------------------------------------
