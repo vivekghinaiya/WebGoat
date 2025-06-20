@@ -22,7 +22,7 @@ steps:
   displayName: 'Install Java 23 and Maven'
 
 - script: |
-    mvn clean install -DskipTests
+    mvn clean package
   displayName: 'Build WebGoat'
 
 - script: |
