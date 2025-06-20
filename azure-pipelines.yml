@@ -19,39 +19,42 @@ steps:
 # ------------------------------------
 - script: |
     echo "Downloading OpenJDK 23..."
-    curl -L -o openjdk-23_linux-x64_bin.tar.gz https://download.java.net/java/GA/jdk23/latest/binaries/openjdk-23_linux-x64_bin.tar.gz
+    curl -L -o openjdk-23.zip https://download.java.net/java/early_access/jdk23/8/GPL/openjdk-23-ea+8_linux-x64_bin.zip
 
-    echo "Extracting JDK..."
-    mkdir -p /opt/jdk
-    tar -xzf openjdk-23_linux-x64_bin.tar.gz -C /opt/jdk
+    echo "Extracting OpenJDK..."
+    unzip openjdk-23.zip -d /opt/jdk
 
     JAVA_HOME_PATH=$(find /opt/jdk -maxdepth 1 -type d -name 'jdk-*' | head -n 1)
-    echo "##vso[task.setvariable variable=JAVA_HOME]$JAVA_HOME_PATH"
-    echo "##vso[task.setvariable variable=PATH]$JAVA_HOME_PATH/bin:$(PATH)"
+    echo "##vso[task.setvariable variable=JAVA_HOME;isOutput=true]$JAVA_HOME_PATH"
+    echo "PATH=$JAVA_HOME_PATH/bin:$PATH" >> $GITHUB_ENV
 
     echo "Installing Maven..."
     curl -L -o apache-maven.tar.gz https://dlcdn.apache.org/maven/maven-3/3.9.6/binaries/apache-maven-3.9.6-bin.tar.gz
     tar -xzf apache-maven.tar.gz -C /opt
-    echo "##vso[task.setvariable variable=MAVEN_HOME]/opt/apache-maven-3.9.6"
-    echo "##vso[task.setvariable variable=PATH]/opt/apache-maven-3.9.6/bin:$(PATH)"
+    echo "##vso[task.setvariable variable=MAVEN_HOME;isOutput=true]/opt/apache-maven-3.9.6"
+    echo "PATH=/opt/apache-maven-3.9.6/bin:$PATH" >> $GITHUB_ENV
 
     echo "Java version:"
     $JAVA_HOME_PATH/bin/java -version
 
     echo "Maven version:"
     /opt/apache-maven-3.9.6/bin/mvn -version
-  displayName: 'Install Java 23 and Maven'
+  name: SetEnv
+  displayName: 'Download & configure Java 23 and Maven'
 
 # ------------------------------------
 # Maven Build with Java 23
 # ------------------------------------
 - script: |
-    echo "Running Maven build..."
+    echo "Running Maven build with Java 23..."
     mvn clean package
-  displayName: 'Build with Maven using Java 23'
+  displayName: 'Build with Maven (Java 23)'
+  env:
+    JAVA_HOME: $(SetEnv.JAVA_HOME)
+    PATH: $(SetEnv.JAVA_HOME)/bin:/opt/apache-maven-3.9.6/bin:$(PATH)
 
 # ------------------------------------
-# SonarQube Analysis Preparation
+# SonarQube Preparation
 # ------------------------------------
 - task: SonarQubePrepare@5
   inputs:
@@ -69,10 +72,13 @@ steps:
 # SonarQube Analysis
 # ------------------------------------
 - task: SonarQubeAnalyze@5
+  displayName: 'Run SonarQube Analysis'
   inputs:
     jdkVersionOption: 'JAVA_HOME'
     jdkArchitecture: 'x64'
-  displayName: 'Run SonarQube Analysis with Java 23'
+  env:
+    JAVA_HOME: $(SetEnv.JAVA_HOME)
+    PATH: $(SetEnv.JAVA_HOME)/bin:/opt/apache-maven-3.9.6/bin:$(PATH)
 
 # ------------------------------------
 # Publish SonarQube Results
