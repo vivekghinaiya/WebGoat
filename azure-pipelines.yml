@@ -4,20 +4,33 @@ trigger:
 pool:
   vmImage: 'ubuntu-latest'
 
+variables:
+  PROJECT_KEY: 'webgoat'
+  SONAR_TOKEN: '$(SONAR_TOKEN)'  # Store in Azure DevOps as secret
+  SONAR_HOST_URL: 'http://103.238.15.202:9000/'  # Replace with your SonarQube URL
+
 steps:
 - script: |
     sudo apt update
-    sudo apt install -y openjdk-23-jdk
+    sudo apt install -y openjdk-23-jdk maven
     sudo update-alternatives --install /usr/bin/java java /usr/lib/jvm/java-23-openjdk-amd64/bin/java 1
     sudo update-alternatives --install /usr/bin/javac javac /usr/lib/jvm/java-23-openjdk-amd64/bin/javac 1
     sudo update-alternatives --set java /usr/lib/jvm/java-23-openjdk-amd64/bin/java
     sudo update-alternatives --set javac /usr/lib/jvm/java-23-openjdk-amd64/bin/javac
     java -version
-  displayName: 'Install and set Java 23 as default'
+    mvn -v
+  displayName: 'Install Java 23 and Maven'
 
 - script: |
-    wget https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-5.0.1.3006-linux.zip
-    unzip sonar-scanner-cli-5.0.1.3006-linux.zip
-    export PATH=$PATH:$(pwd)/sonar-scanner-5.0.1.3006-linux/bin
-    sonar-scanner --version
-  displayName: 'Install SonarScanner CLI'
+    mvn clean install -DskipTests
+  displayName: 'Build WebGoat'
+
+- script: |
+    export PATH=$SONAR_SCANNER_PATH:$PATH
+    sonar-scanner \
+      -Dsonar.projectKey=$(PROJECT_KEY) \
+      -Dsonar.sources=src/main \
+      -Dsonar.java.binaries=target/classes \
+      -Dsonar.host.url=$(SONAR_HOST_URL) \
+      -Dsonar.login=$(SONAR_TOKEN)
+  displayName: 'Run SonarQube Scan'
